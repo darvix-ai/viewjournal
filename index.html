@@ -1,141 +1,384 @@
 <!DOCTYPE html>
-
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+>
+
 <title>Trade Journal · Darvix AI</title>
-<meta name="description" content="Trade journal, powered by Darvix AI.">
+
+<meta
+  name="description"
+  content="Trade journal, powered by Darvix AI."
+>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+>
+
 <link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
 
 <div class="bg-field" aria-hidden="true"></div>
 
 <div class="app">
 
+  <!-- =====================================================
+  HEADER
+  ====================================================== -->
+
   <header class="header">
+
     <div class="brand">
-      <div class="brand-mark">DARVIX <span>AI</span></div>
-      <div class="brand-sub">FX JOURNAL</div>
+
+      <div class="brand-mark">
+        DARVIX <span>AI</span>
+      </div>
+
+      <div class="brand-sub">
+        FX JOURNAL
+      </div>
+
     </div>
 
-```
-<button class="share-btn" id="shareBtn" type="button">
-  <span class="share-icon">&#8599;</span>
-  Share
-</button>
-```
+    <button
+      class="share-btn"
+      id="shareBtn"
+      type="button"
+      aria-label="Share this journal"
+    >
+
+      <span class="share-icon" aria-hidden="true">
+
+        <svg
+          viewBox="0 0 24 24"
+          role="img"
+          aria-hidden="true"
+        >
+
+          <path d="M7 17L17 7"></path>
+          <path d="M10 7H17V14"></path>
+
+        </svg>
+
+      </span>
+
+      <span>Share</span>
+
+    </button>
 
   </header>
 
+
+  <!-- =====================================================
+  MAIN
+  ====================================================== -->
+
   <main id="content">
 
-```
-<div class="state-block" id="loadingState">
-  <div class="spinner"></div>
-  <p>Loading journal...</p>
-</div>
 
-<div class="state-block" id="noTokenState" hidden>
-  <h1>No journal link</h1>
-  <p>This page needs a journal link to know whose trades to show. Open it from your Darvix AI bot instead.</p>
-</div>
+    <!-- LOADING -->
 
-<div class="state-block" id="notFoundState" hidden>
-  <h1>Journal not found</h1>
-  <p>This link doesn't match a journal we know about. Double-check the link, or ask for a fresh one from the bot.</p>
-</div>
+    <div
+      class="state-block"
+      id="loadingState"
+    >
 
-<div class="state-block" id="errorState" hidden>
-  <h1>Couldn't load this journal</h1>
-  <p>Something went wrong reaching the journal service. Try again in a moment.</p>
-  <button class="retry-btn" id="retryBtn" type="button">Retry</button>
-</div>
+      <div class="spinner"></div>
 
-<div class="state-block" id="emptyTradesState" hidden>
-  <h1>No trades yet</h1>
-  <p>Once <span id="emptyTraderName">this trader</span> journals a trade, it'll show up here.</p>
-</div>
-
-<div id="journal" hidden>
-
-  <div class="trader-strip">
-    <span class="trader-dot"></span>
-    <span id="traderLine"></span>
-  </div>
-
-  <div class="stats" id="statsGrid"></div>
-
-  <section class="performance-card">
-
-    <div class="section-heading">
-      <div>
-        <div class="section-kicker">PERFORMANCE</div>
-        <h2>Growth</h2>
-      </div>
-
-      <div class="growth-value" id="growthValue">$0.00</div>
-    </div>
-
-    <div class="chart-wrap">
-      <svg
-        id="growthChart"
-        class="growth-chart"
-        viewBox="0 0 500 210"
-        preserveAspectRatio="none"
-        aria-label="Cumulative P&L growth chart"
-        role="img">
-      </svg>
-
-      <div class="chart-empty" id="chartEmpty" hidden>
-        No growth data yet.
-      </div>
-    </div>
-
-  </section>
-
-  <section class="profit-factor-card">
-
-    <div class="pf-main">
-      <div class="section-kicker">PROFIT FACTOR</div>
-      <div class="pf-value" id="profitFactorValue">0.00</div>
-      <div class="pf-description" id="profitFactorDescription">
-        Gross profit ÷ gross loss
-      </div>
-    </div>
-
-    <div class="pf-breakdown">
-
-      <div class="pf-item">
-        <span>Gross Profit</span>
-        <strong class="profit" id="grossProfitValue">$0.00</strong>
-      </div>
-
-      <div class="pf-item">
-        <span>Gross Loss</span>
-        <strong class="loss" id="grossLossValue">$0.00</strong>
-      </div>
+      <p>
+        Loading journal...
+      </p>
 
     </div>
 
-  </section>
 
-  <div id="tradeList"></div>
+    <!-- NO TOKEN -->
 
-</div>
-```
+    <div
+      class="state-block"
+      id="noTokenState"
+      hidden
+    >
+
+      <h1>
+        No journal link
+      </h1>
+
+      <p>
+        This page needs a journal link to know whose trades to show.
+        Open it from your Darvix AI bot instead.
+      </p>
+
+    </div>
+
+
+    <!-- NOT FOUND -->
+
+    <div
+      class="state-block"
+      id="notFoundState"
+      hidden
+    >
+
+      <h1>
+        Journal not found
+      </h1>
+
+      <p>
+        This link doesn't match a journal we know about.
+        Double-check the link, or ask for a fresh one from the bot.
+      </p>
+
+    </div>
+
+
+    <!-- ERROR -->
+
+    <div
+      class="state-block"
+      id="errorState"
+      hidden
+    >
+
+      <h1>
+        Couldn't load this journal
+      </h1>
+
+      <p>
+        Something went wrong reaching the journal service.
+        Try again in a moment.
+      </p>
+
+      <button
+        class="retry-btn"
+        id="retryBtn"
+        type="button"
+      >
+        Retry
+      </button>
+
+    </div>
+
+
+    <!-- EMPTY -->
+
+    <div
+      class="state-block"
+      id="emptyTradesState"
+      hidden
+    >
+
+      <h1>
+        No trades yet
+      </h1>
+
+      <p>
+        Once
+        <span id="emptyTraderName">
+          this trader
+        </span>
+        journals a trade, it'll show up here.
+      </p>
+
+    </div>
+
+
+    <!-- ===================================================
+    JOURNAL
+    ==================================================== -->
+
+    <div
+      id="journal"
+      hidden
+    >
+
+
+      <!-- TRADER -->
+
+      <div class="trader-strip">
+
+        <span
+          class="trader-dot"
+          aria-hidden="true"
+        ></span>
+
+        <span id="traderLine"></span>
+
+      </div>
+
+
+      <!-- STATS -->
+
+      <div
+        class="stats"
+        id="statsGrid"
+      ></div>
+
+
+      <!-- =================================================
+      PERFORMANCE
+      ================================================== -->
+
+      <section class="performance-card">
+
+        <div class="section-heading">
+
+          <div>
+
+            <div class="section-kicker">
+              PERFORMANCE
+            </div>
+
+            <h2>
+              Growth
+            </h2>
+
+          </div>
+
+          <div
+            class="growth-value"
+            id="growthValue"
+          >
+            $0.00
+          </div>
+
+        </div>
+
+
+        <div class="chart-wrap">
+
+          <svg
+            id="growthChart"
+            class="growth-chart"
+            viewBox="0 0 500 210"
+            preserveAspectRatio="none"
+            aria-label="Cumulative P&L growth chart"
+            role="img"
+          >
+          </svg>
+
+
+          <div
+            class="chart-empty"
+            id="chartEmpty"
+            hidden
+          >
+            No growth data yet.
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+      PROFIT FACTOR
+      ================================================== -->
+
+      <section class="profit-factor-card">
+
+        <div class="pf-main">
+
+          <div class="section-kicker">
+            PROFIT FACTOR
+          </div>
+
+          <div
+            class="pf-value"
+            id="profitFactorValue"
+          >
+            0.00
+          </div>
+
+          <div
+            class="pf-description"
+            id="profitFactorDescription"
+          >
+            Gross profit ÷ gross loss
+          </div>
+
+        </div>
+
+
+        <div class="pf-breakdown">
+
+
+          <div class="pf-item">
+
+            <span>
+              Gross Profit
+            </span>
+
+            <strong
+              class="profit"
+              id="grossProfitValue"
+            >
+              $0.00
+            </strong>
+
+          </div>
+
+
+          <div class="pf-item">
+
+            <span>
+              Gross Loss
+            </span>
+
+            <strong
+              class="loss"
+              id="grossLossValue"
+            >
+              $0.00
+            </strong>
+
+          </div>
+
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+      TRADE LIST
+      ================================================== -->
+
+      <div id="tradeList"></div>
+
+
+    </div>
 
   </main>
 
 </div>
 
-<div class="toast" id="shareToast"></div>
+
+<!-- SHARE TOAST -->
+
+<div
+  class="toast"
+  id="shareToast"
+  role="status"
+  aria-live="polite"
+></div>
+
 
 <script src="script.js"></script>
 
 </body>
+
 </html>
