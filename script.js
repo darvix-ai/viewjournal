@@ -1,4 +1,3 @@
-```javascript
 (function () {
   "use strict";
 
@@ -70,14 +69,7 @@
 
   // ---------------------------------------------------------
   // GET CALCULATED P&L
-  //
-  // Airtable is now the source of truth.
-  //
-  // Preferred field:
-  // calculated_pnl
-  //
-  // The fallbacks make the viewer safer if n8n changes
-  // the field name slightly.
+  // Airtable calculated_pnl is the source of truth.
   // ---------------------------------------------------------
   function getCalculatedPnl(trade) {
     var raw;
@@ -134,14 +126,6 @@
 
   // ---------------------------------------------------------
   // PERFORMANCE CALCULATIONS
-  //
-  // Uses Airtable calculated P&L.
-  //
-  // Win + 123       = +123
-  // Loss + 100      = -100
-  // Breakeven + 100 = 0
-  //
-  // The trader does NOT need to type the minus sign.
   // ---------------------------------------------------------
   function calculatePerformance(trades) {
     var grossProfit = 0;
@@ -150,7 +134,6 @@
     var points = [];
 
     trades.forEach(function (trade, index) {
-
       var pnl = getCalculatedPnl(trade);
 
       if (pnl > 0) {
@@ -207,9 +190,6 @@
 
   // ---------------------------------------------------------
   // STATS
-  //
-  // Net P&L is calculated from the same Airtable calculated
-  // P&L values used by the chart and profit factor.
   // ---------------------------------------------------------
   function renderStats(data, performance) {
     var totalPnl = performance.totalPnl;
@@ -332,7 +312,7 @@
         '<div class="card-head">' +
 
           '<span class="step-num">' +
-            String(trade.number).padStart(2, "0") +
+            String(trade.number || "").padStart(2, "0") +
           '</span>' +
 
           '<div class="head-text">' +
@@ -449,7 +429,6 @@
       "-$" + performance.grossLoss.toFixed(2);
 
     if (performance.profitFactor === Infinity) {
-
       pfElement.textContent = "∞";
 
       description.textContent =
@@ -462,22 +441,18 @@
       performance.profitFactor.toFixed(2);
 
     if (performance.profitFactor > 1) {
-
       description.textContent =
         "Gross profit ÷ gross loss";
 
     } else if (performance.profitFactor === 1) {
-
       description.textContent =
         "Gross profit equals gross loss";
 
     } else if (performance.profitFactor > 0) {
-
       description.textContent =
         "Gross loss is currently higher";
 
     } else {
-
       description.textContent =
         "No winning trades recorded";
     }
@@ -485,8 +460,6 @@
 
   // ---------------------------------------------------------
   // GROWTH CHART
-  //
-  // The chart works with even ONE trade.
   // ---------------------------------------------------------
   function renderGrowthChart(performance) {
     var svg =
@@ -501,14 +474,9 @@
     var points = performance.points;
 
     if (!points || points.length < 1) {
-
       svg.innerHTML = "";
-
       empty.hidden = false;
-
-      growthValue.textContent =
-        "$0.00";
-
+      growthValue.textContent = "$0.00";
       return;
     }
 
@@ -545,7 +513,6 @@
       Math.max.apply(null, values);
 
     if (minValue === maxValue) {
-
       var padding =
         Math.max(
           Math.abs(minValue) * 0.25,
@@ -564,7 +531,6 @@
     maxValue += range * 0.08;
 
     function x(index) {
-
       if (points.length === 1) {
         return paddingLeft +
           chartWidth / 2;
@@ -578,7 +544,6 @@
     }
 
     function y(value) {
-
       return (
         paddingTop +
         (
@@ -590,17 +555,12 @@
     }
 
     var linePoints =
-      points.map(function (
-        point,
-        index
-      ) {
-
+      points.map(function (point, index) {
         return (
           x(index).toFixed(2) +
           "," +
           y(point.cumulative).toFixed(2)
         );
-
       }).join(" ");
 
     var zeroY = y(0);
@@ -666,9 +626,7 @@
 
       '<polyline ' +
         'points="' + linePoints + '" ' +
-        'class="growth-line ' +
-          lineClass +
-        '" ' +
+        'class="growth-line ' + lineClass + '" ' +
         'fill="none" ' +
         'stroke-linecap="round" ' +
         'stroke-linejoin="round" />' +
@@ -677,9 +635,7 @@
         'cx="' + lastX + '" ' +
         'cy="' + y(finalValue) + '" ' +
         'r="4" ' +
-        'class="growth-dot ' +
-          lineClass +
-        '" />';
+        'class="growth-dot ' + lineClass + '" />';
 
     growthValue.textContent =
       formatMoney(finalValue);
@@ -745,9 +701,7 @@
       encodeURIComponent(token);
 
     fetch(url)
-
       .then(function (res) {
-
         if (!res.ok) {
           throw new Error(
             "Request failed: " +
@@ -759,7 +713,6 @@
       })
 
       .then(function (data) {
-
         if (!data || data.found === false) {
           showState("notFound");
           return;
@@ -769,7 +722,6 @@
           !data.trades ||
           data.trades.length === 0
         ) {
-
           document.getElementById(
             "emptyTraderName"
           ).textContent =
@@ -783,7 +735,12 @@
         renderJournal(data);
       })
 
-      .catch(function () {
+      .catch(function (error) {
+        console.error(
+          "Journal loading error:",
+          error
+        );
+
         showState("error");
       });
   }
@@ -795,7 +752,6 @@
     document.getElementById("retryBtn");
 
   if (retryBtn) {
-
     retryBtn.addEventListener(
       "click",
       loadJournal
@@ -812,20 +768,16 @@
     document.getElementById("shareToast");
 
   function showToast(msg) {
-
     toast.textContent = msg;
 
     toast.classList.add("visible");
 
     setTimeout(function () {
-
       toast.classList.remove("visible");
-
     }, 2200);
   }
 
   function fallbackCopy(url) {
-
     var temp =
       document.createElement("textarea");
 
@@ -840,13 +792,9 @@
     temp.select();
 
     try {
-
       document.execCommand("copy");
-
       showToast("Link copied");
-
     } catch (e) {
-
       showToast("Couldn't copy link");
     }
 
@@ -854,16 +802,13 @@
   }
 
   if (shareBtn) {
-
     shareBtn.addEventListener(
       "click",
       function () {
-
         var url =
           window.location.href;
 
         if (!getToken()) {
-
           showToast(
             "Nothing to share yet"
           );
@@ -872,7 +817,6 @@
         }
 
         if (navigator.share) {
-
           navigator.share({
             title: document.title,
             url: url
@@ -887,23 +831,16 @@
           navigator.clipboard &&
           navigator.clipboard.writeText
         ) {
-
           navigator.clipboard
             .writeText(url)
-
             .then(function () {
-
               showToast("Link copied");
-
             })
-
             .catch(function () {
-
               fallbackCopy(url);
             });
 
         } else {
-
           fallbackCopy(url);
         }
       }
@@ -916,4 +853,3 @@
   loadJournal();
 
 })();
-```
