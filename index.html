@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,116 +23,112 @@
       <div class="brand-sub">FX JOURNAL</div>
     </div>
 
-    <button class="share-btn" id="shareBtn" type="button">
-      <span class="share-icon">&#8599;</span>
-      Share
-    </button>
+```
+<button class="share-btn" id="shareBtn" type="button">
+  <span class="share-icon">&#8599;</span>
+  Share
+</button>
+```
+
   </header>
 
   <main id="content">
 
-    <!-- Loading state -->
-    <div class="state-block" id="loadingState">
-      <div class="spinner"></div>
-      <p>Loading journal...</p>
-    </div>
+```
+<div class="state-block" id="loadingState">
+  <div class="spinner"></div>
+  <p>Loading journal...</p>
+</div>
 
-    <!-- No-token state -->
-    <div class="state-block" id="noTokenState" hidden>
-      <h1>No journal link</h1>
-      <p>This page needs a journal link to know whose trades to show. Open it from your Darvix AI bot instead.</p>
-    </div>
+<div class="state-block" id="noTokenState" hidden>
+  <h1>No journal link</h1>
+  <p>This page needs a journal link to know whose trades to show. Open it from your Darvix AI bot instead.</p>
+</div>
 
-    <!-- Not-found state -->
-    <div class="state-block" id="notFoundState" hidden>
-      <h1>Journal not found</h1>
-      <p>This link doesn't match a journal we know about. Double-check the link, or ask for a fresh one from the bot.</p>
-    </div>
+<div class="state-block" id="notFoundState" hidden>
+  <h1>Journal not found</h1>
+  <p>This link doesn't match a journal we know about. Double-check the link, or ask for a fresh one from the bot.</p>
+</div>
 
-    <!-- Fetch-error state -->
-    <div class="state-block" id="errorState" hidden>
-      <h1>Couldn't load this journal</h1>
-      <p>Something went wrong reaching the journal service. Try again in a moment.</p>
-      <button class="retry-btn" id="retryBtn" type="button">Retry</button>
-    </div>
+<div class="state-block" id="errorState" hidden>
+  <h1>Couldn't load this journal</h1>
+  <p>Something went wrong reaching the journal service. Try again in a moment.</p>
+  <button class="retry-btn" id="retryBtn" type="button">Retry</button>
+</div>
 
-    <!-- Empty state -->
-    <div class="state-block" id="emptyTradesState" hidden>
-      <h1>No trades yet</h1>
-      <p>Once <span id="emptyTraderName">this trader</span> journals a trade, it'll show up here.</p>
-    </div>
+<div class="state-block" id="emptyTradesState" hidden>
+  <h1>No trades yet</h1>
+  <p>Once <span id="emptyTraderName">this trader</span> journals a trade, it'll show up here.</p>
+</div>
 
-    <!-- Journal content -->
-    <div id="journal" hidden>
+<div id="journal" hidden>
 
-      <div class="trader-strip">
-        <span class="trader-dot"></span>
-        <span id="traderLine"></span>
+  <div class="trader-strip">
+    <span class="trader-dot"></span>
+    <span id="traderLine"></span>
+  </div>
+
+  <div class="stats" id="statsGrid"></div>
+
+  <section class="performance-card">
+
+    <div class="section-heading">
+      <div>
+        <div class="section-kicker">PERFORMANCE</div>
+        <h2>Growth</h2>
       </div>
 
-      <!-- Summary stats -->
-      <div class="stats" id="statsGrid"></div>
+      <div class="growth-value" id="growthValue">$0.00</div>
+    </div>
 
-      <!-- Performance -->
-      <section class="performance-card">
+    <div class="chart-wrap">
+      <svg
+        id="growthChart"
+        class="growth-chart"
+        viewBox="0 0 500 210"
+        preserveAspectRatio="none"
+        aria-label="Cumulative P&L growth chart"
+        role="img">
+      </svg>
 
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">PERFORMANCE</div>
-            <h2>Growth</h2>
-          </div>
+      <div class="chart-empty" id="chartEmpty" hidden>
+        No growth data yet.
+      </div>
+    </div>
 
-          <div class="growth-value" id="growthValue">$0.00</div>
-        </div>
+  </section>
 
-        <div class="chart-wrap">
-          <svg
-            id="growthChart"
-            class="growth-chart"
-            viewBox="0 0 500 210"
-            preserveAspectRatio="none"
-            aria-label="Cumulative P&L growth chart"
-            role="img">
-          </svg>
+  <section class="profit-factor-card">
 
-          <div class="chart-empty" id="chartEmpty" hidden>
-            Not enough data to display growth.
-          </div>
-        </div>
+    <div class="pf-main">
+      <div class="section-kicker">PROFIT FACTOR</div>
+      <div class="pf-value" id="profitFactorValue">0.00</div>
+      <div class="pf-description" id="profitFactorDescription">
+        Gross profit ÷ gross loss
+      </div>
+    </div>
 
-      </section>
+    <div class="pf-breakdown">
 
-      <!-- Profit factor -->
-      <section class="profit-factor-card">
+      <div class="pf-item">
+        <span>Gross Profit</span>
+        <strong class="profit" id="grossProfitValue">$0.00</strong>
+      </div>
 
-        <div class="pf-main">
-          <div class="section-kicker">PROFIT FACTOR</div>
-          <div class="pf-value" id="profitFactorValue">0.00</div>
-          <div class="pf-description" id="profitFactorDescription">
-            Gross profit ÷ gross loss
-          </div>
-        </div>
-
-        <div class="pf-breakdown">
-
-          <div class="pf-item">
-            <span>Gross Profit</span>
-            <strong class="profit" id="grossProfitValue">$0.00</strong>
-          </div>
-
-          <div class="pf-item">
-            <span>Gross Loss</span>
-            <strong class="loss" id="grossLossValue">$0.00</strong>
-          </div>
-
-        </div>
-
-      </section>
-
-      <!-- Trades -->
-      <div id="tradeList"></div>
+      <div class="pf-item">
+        <span>Gross Loss</span>
+        <strong class="loss" id="grossLossValue">$0.00</strong>
+      </div>
 
     </div>
+
+  </section>
+
+  <div id="tradeList"></div>
+
+</div>
+```
+
   </main>
 
 </div>
@@ -139,5 +136,6 @@
 <div class="toast" id="shareToast"></div>
 
 <script src="script.js"></script>
+
 </body>
 </html>
