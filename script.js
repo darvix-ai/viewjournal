@@ -5,8 +5,8 @@
   // CONFIG — fill this in with your n8n PRODUCTION webhook URL
   // (Journal Viewer workflow → Webhook node → "Production URL")
   // ---------------------------------------------------------
-  var API_ENDPOINT = "https://wsuzs1sr.rpcld.cc/webhook/darvix-journal-view";
-  var TOKEN_PARAM = "t"; // the query param this page reads, e.g. ?t=DJ-20260829-XXXXXX
+  var API_ENDPOINT = "https://wsuzs1sr.rpcld.cc/webhook/viewjournal";
+  var TOKEN_PARAM = "token"; // the query param this page reads, e.g. ?token=DJ-20260829-XXXXXX
 
   // ---------------------------------------------------------
   // HELPERS
