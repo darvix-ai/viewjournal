@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Trade Journal · Darvix AI</title>
+<meta name="description" content="Trade journal, powered by Darvix AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-field" aria-hidden="true"></div>
+
+<div class="app">
+
+  <header class="header">
+    <div class="brand">
+      <div class="brand-mark">DARVIX <span>AI</span></div>
+      <div class="brand-sub">FX JOURNAL</div>
+    </div>
+    <button class="share-btn" id="shareBtn" type="button">
+      <span class="share-icon">&#8599;</span>
+      Share
+    </button>
+  </header>
+
+  <main id="content">
+    <!-- Loading state -->
+    <div class="state-block" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading journal...</p>
+    </div>
+
+    <!-- No-token state -->
+    <div class="state-block" id="noTokenState" hidden>
+      <h1>No journal link</h1>
+      <p>This page needs a journal link to know whose trades to show. Open it from your Darvix AI bot instead.</p>
+    </div>
+
+    <!-- Not-found state -->
+    <div class="state-block" id="notFoundState" hidden>
+      <h1>Journal not found</h1>
+      <p>This link doesn't match a journal we know about. Double-check the link, or ask for a fresh one from the bot.</p>
+    </div>
+
+    <!-- Fetch-error state -->
+    <div class="state-block" id="errorState" hidden>
+      <h1>Couldn't load this journal</h1>
+      <p>Something went wrong reaching the journal service. Try again in a moment.</p>
+      <button class="retry-btn" id="retryBtn" type="button">Retry</button>
+    </div>
+
+    <!-- Empty state (found, zero trades) -->
+    <div class="state-block" id="emptyTradesState" hidden>
+      <h1>No trades yet</h1>
+      <p>Once <span id="emptyTraderName">this trader</span> journals a trade, it'll show up here.</p>
+    </div>
+
+    <!-- Journal content -->
+    <div id="journal" hidden>
+      <div class="trader-strip">
+        <span class="trader-dot"></span>
+        <span id="traderLine"></span>
+      </div>
+
+      <div class="stats" id="statsGrid"></div>
+
+      <div id="tradeList"></div>
+    </div>
+  </main>
+
+</div>
+
+<div class="toast" id="shareToast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
