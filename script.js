@@ -2,17 +2,17 @@
   "use strict";
 
   // ---------------------------------------------------------
-  // CONFIG — fill this in with your n8n PRODUCTION webhook URL
-  // (Journal Viewer workflow → Webhook node → "Production URL")
+  // CONFIG
   // ---------------------------------------------------------
   var API_ENDPOINT = "https://wsuzs1sr.rpcld.cc/webhook/viewjournal";
-  var TOKEN_PARAM = "token"; // the query param this page reads, e.g. ?token=DJ-20260829-XXXXXX
+  var TOKEN_PARAM = "token";
 
   // ---------------------------------------------------------
   // HELPERS
   // ---------------------------------------------------------
   function escapeHTML(value) {
     if (value === null || value === undefined) return "";
+
     return String(value)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -23,8 +23,13 @@
 
   function formatDate(value) {
     if (!value) return "";
+
     var date = new Date(value);
-    if (isNaN(date.getTime())) return escapeHTML(value);
+
+    if (isNaN(date.getTime())) {
+      return escapeHTML(value);
+    }
+
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -32,30 +37,19 @@
     });
   }
 
-  // Used by the TOP SUMMARY.
-  // This remains based on the actual numeric P&L.
   function moneyClass(n) {
     if (n > 0) return "profit";
     if (n < 0) return "loss";
     return "neutral";
   }
 
-  // Used by the individual trade OUTCOME badge.
   function outcomeClass(outcome) {
-    var o = (outcome || "").toLowerCase();
+    var o = (outcome || "").toLowerCase().trim();
+
     if (o === "win") return "outcome-win";
     if (o === "loss") return "outcome-loss";
+
     return "outcome-breakeven";
-  }
-
-  // Used by the individual trade P&L.
-  // The P&L colour now follows the selected trade outcome.
-  function pnlOutcomeClass(outcome) {
-    var o = (outcome || "").toLowerCase();
-
-    if (o === "win") return "profit";
-    if (o === "loss") return "loss";
-    return "neutral";
   }
 
   function directionClass(direction) {
@@ -63,12 +57,121 @@
   }
 
   function directionArrow(direction) {
-    return (direction || "").toLowerCase() === "buy" ? "&#8599;" : "&#8600;";
+    return (direction || "").toLowerCase() === "buy"
+      ? "&#8599;"
+      : "&#8600;";
   }
 
   function getToken() {
     var params = new URLSearchParams(window.location.search);
     return params.get(TOKEN_PARAM) || "";
+  }
+
+  // ---------------------------------------------------------
+  // P&L NORMALIZATION
+  //
+  // IMPORTANT:
+  // Outcome is the source of truth.
+  //
+  // If trader enters:
+  // Outcome = Loss
+  // P&L = 20
+  //
+  // We treat it as -20.
+  // ---------------------------------------------------------
+  function getTradePnl(trade) {
+    var raw = trade.pnl;
+
+    if (typeof raw === "string") {
+      raw = raw.replace(/[$,\s]/g, "");
+    }
+
+    var amount = parseFloat(raw);
+
+    if (isNaN(amount)) {
+      amount = 0;
+    }
+
+    var outcome = (trade.outcome || "").toLowerCase().trim();
+
+    if (outcome === "loss") {
+      return -Math.abs(amount);
+    }
+
+    if (outcome === "win") {
+      return Math.abs(amount);
+    }
+
+    if (
+      outcome === "breakeven" ||
+      outcome === "break even" ||
+      outcome === "break-even"
+    ) {
+      return 0;
+    }
+
+    // Fallback if outcome is missing
+    return amount;
+  }
+
+  function formatMoney(amount) {
+    if (amount > 0) {
+      return "+$" + amount.toFixed(2);
+    }
+
+    if (amount < 0) {
+      return "-$" + Math.abs(amount).toFixed(2);
+    }
+
+    return "$0.00";
+  }
+
+  // ---------------------------------------------------------
+  // PERFORMANCE CALCULATIONS
+  // ---------------------------------------------------------
+  function calculatePerformance(trades) {
+    var grossProfit = 0;
+    var grossLoss = 0;
+    var cumulative = 0;
+    var points = [];
+
+    trades.forEach(function (trade, index) {
+
+      var pnl = getTradePnl(trade);
+      var outcome = (trade.outcome || "").toLowerCase().trim();
+
+      if (outcome === "win") {
+        grossProfit += Math.abs(pnl);
+      }
+
+      if (outcome === "loss") {
+        grossLoss += Math.abs(pnl);
+      }
+
+      cumulative += pnl;
+
+      points.push({
+        trade: index + 1,
+        pnl: pnl,
+        cumulative: cumulative
+      });
+    });
+
+    var profitFactor = 0;
+
+    if (grossLoss > 0) {
+      profitFactor = grossProfit / grossLoss;
+    } else if (grossProfit > 0) {
+      profitFactor = Infinity;
+    }
+
+    return {
+      grossProfit: grossProfit,
+      grossLoss: grossLoss,
+      profitFactor: profitFactor,
+      points: points,
+      totalPnl: cumulative
+    };
   }
 
   // ---------------------------------------------------------
@@ -90,46 +193,88 @@
   }
 
   // ---------------------------------------------------------
-  // RENDER
+  // STATS
   // ---------------------------------------------------------
   function renderStats(data) {
+    var totalPnl = parseFloat(data.total_pnl);
+
+    if (isNaN(totalPnl)) {
+      totalPnl = 0;
+    }
+
     var pnlFormatted =
-      data.total_pnl >= 0
-        ? "+$" + data.total_pnl.toFixed(2)
-        : "-$" + Math.abs(data.total_pnl).toFixed(2);
+      totalPnl >= 0
+        ? "+$" + totalPnl.toFixed(2)
+        : "-$" + Math.abs(totalPnl).toFixed(2);
 
     var cells = [
-      { label: "Trades", value: data.total_trades, cls: "" },
-      { label: "Net P&amp;L", value: pnlFormatted, cls: moneyClass(data.total_pnl) },
-      { label: "Win Rate", value: data.win_rate + "%", cls: "" },
-      { label: "Wins", value: data.wins, cls: "profit" },
-      { label: "Losses", value: data.losses, cls: "loss" },
-      { label: "Breakeven", value: data.breakeven, cls: "neutral" }
+      {
+        label: "Trades",
+        value: data.total_trades,
+        cls: ""
+      },
+      {
+        label: "Net P&amp;L",
+        value: pnlFormatted,
+        cls: moneyClass(totalPnl)
+      },
+      {
+        label: "Win Rate",
+        value: data.win_rate + "%",
+        cls: ""
+      },
+      {
+        label: "Wins",
+        value: data.wins,
+        cls: "profit"
+      },
+      {
+        label: "Losses",
+        value: data.losses,
+        cls: "loss"
+      },
+      {
+        label: "Breakeven",
+        value: data.breakeven,
+        cls: "neutral"
+      }
     ];
 
     return cells.map(function (c) {
       return (
         '<div class="stat">' +
           '<span>' + c.label + '</span>' +
-          '<strong class="' + c.cls + '">' + escapeHTML(c.value) + '</strong>' +
+          '<strong class="' + c.cls + '">' +
+            escapeHTML(c.value) +
+          '</strong>' +
         '</div>'
       );
     }).join("");
   }
 
+  // ---------------------------------------------------------
+  // TRADE CARD
+  // ---------------------------------------------------------
   function renderTradeCard(trade) {
-    // Individual trade P&L colour now follows the trade outcome.
-    var pnlClass = pnlOutcomeClass(trade.outcome);
 
+    // Outcome determines P&L direction
+    var actualPnl = getTradePnl(trade);
+
+    var pnlClass = moneyClass(actualPnl);
     var oClass = outcomeClass(trade.outcome);
     var dClass = directionClass(trade.direction);
     var arrow = directionArrow(trade.direction);
+
+    // Normalize displayed P&L
+    var pnlDisplay = formatMoney(actualPnl);
 
     var notesHTML = trade.notes
       ? (
           '<div class="notes">' +
             '<div class="notes-title">NOTES / EMOTIONS</div>' +
-            '<div class="notes-content">' + escapeHTML(trade.notes) + '</div>' +
+            '<div class="notes-content">' +
+              escapeHTML(trade.notes) +
+            '</div>' +
           '</div>'
         )
       : "";
@@ -138,18 +283,32 @@
 
     if (trade.before_screenshot) {
       shots.push(
-        '<a class="screenshot" href="' + trade.before_screenshot + '" target="_blank" rel="noopener">' +
-          '<img src="' + trade.before_screenshot + '" alt="Before trade screenshot" loading="lazy">' +
+        '<a class="screenshot" href="' +
+          escapeHTML(trade.before_screenshot) +
+          '" target="_blank" rel="noopener">' +
+
+          '<img src="' +
+            escapeHTML(trade.before_screenshot) +
+            '" alt="Before trade screenshot" loading="lazy">' +
+
           '<div class="image-label">BEFORE</div>' +
+
         '</a>'
       );
     }
 
     if (trade.after_screenshot) {
       shots.push(
-        '<a class="screenshot" href="' + trade.after_screenshot + '" target="_blank" rel="noopener">' +
-          '<img src="' + trade.after_screenshot + '" alt="After trade screenshot" loading="lazy">' +
+        '<a class="screenshot" href="' +
+          escapeHTML(trade.after_screenshot) +
+          '" target="_blank" rel="noopener">' +
+
+          '<img src="' +
+            escapeHTML(trade.after_screenshot) +
+            '" alt="After trade screenshot" loading="lazy">' +
+
           '<div class="image-label">AFTER</div>' +
+
         '</a>'
       );
     }
@@ -157,56 +316,364 @@
     var screenshotsHTML = shots.length
       ? (
           '<div class="screenshots-title">TRADE SCREENSHOTS</div>' +
-          '<div class="screenshots">' + shots.join("") + '</div>'
+          '<div class="screenshots">' +
+            shots.join("") +
+          '</div>'
         )
       : "";
 
     return (
       '<div class="trade-card">' +
+
         '<div class="card-head">' +
-          '<span class="step-num">' + String(trade.number).padStart(2, "0") + '</span>' +
+
+          '<span class="step-num">' +
+            String(trade.number).padStart(2, "0") +
+          '</span>' +
+
           '<div class="head-text">' +
-            '<h2>' + escapeHTML(trade.symbol) + '</h2>' +
-            (trade.date ? '<p class="card-date">' + formatDate(trade.date) + '</p>' : '') +
+
+            '<h2>' +
+              escapeHTML(trade.symbol) +
+            '</h2>' +
+
+            (
+              trade.date
+                ? '<p class="card-date">' +
+                    formatDate(trade.date) +
+                  '</p>'
+                : ''
+            ) +
+
           '</div>' +
-          '<div class="direction ' + dClass + '"><span>' + arrow + '</span>' + escapeHTML(trade.direction) + '</div>' +
+
+          '<div class="direction ' +
+            dClass +
+            '">' +
+
+            '<span>' +
+              arrow +
+            '</span>' +
+
+            escapeHTML(trade.direction) +
+
+          '</div>' +
+
         '</div>' +
 
         '<div class="pnl-section">' +
+
           '<div class="pnl-label">P&amp;L</div>' +
-          '<div class="pnl ' + pnlClass + '">' + escapeHTML(trade.pnl_display) + '</div>' +
+
+          '<div class="pnl ' +
+            pnlClass +
+            '">' +
+
+            escapeHTML(pnlDisplay) +
+
+          '</div>' +
+
         '</div>' +
 
         '<div class="outcome-row">' +
+
           '<span class="outcome-label">Outcome</span>' +
-          '<span class="outcome ' + oClass + '">' + escapeHTML(trade.outcome) + '</span>' +
+
+          '<span class="outcome ' +
+            oClass +
+            '">' +
+
+            escapeHTML(trade.outcome) +
+
+          '</span>' +
+
         '</div>' +
 
         '<div class="details">' +
-          '<div class="detail"><span>Risk</span><strong>' + escapeHTML(trade.risk) + '</strong></div>' +
-          '<div class="detail"><span>Target RR</span><strong>' + escapeHTML(trade.target_rr) + '</strong></div>' +
-          '<div class="detail"><span>Closed RR</span><strong>' + escapeHTML(trade.closed_rr) + '</strong></div>' +
+
+          '<div class="detail">' +
+            '<span>Risk</span>' +
+            '<strong>' +
+              escapeHTML(trade.risk) +
+            '</strong>' +
+          '</div>' +
+
+          '<div class="detail">' +
+            '<span>Target RR</span>' +
+            '<strong>' +
+              escapeHTML(trade.target_rr) +
+            '</strong>' +
+          '</div>' +
+
+          '<div class="detail">' +
+            '<span>Closed RR</span>' +
+            '<strong>' +
+              escapeHTML(trade.closed_rr) +
+            '</strong>' +
+          '</div>' +
+
         '</div>' +
 
         notesHTML +
+
         screenshotsHTML +
+
       '</div>'
     );
   }
 
+  // ---------------------------------------------------------
+  // PROFIT FACTOR
+  // ---------------------------------------------------------
+  function renderProfitFactor(performance) {
+
+    var pfElement =
+      document.getElementById("profitFactorValue");
+
+    var gpElement =
+      document.getElementById("grossProfitValue");
+
+    var glElement =
+      document.getElementById("grossLossValue");
+
+    var description =
+      document.getElementById("profitFactorDescription");
+
+    gpElement.textContent =
+      "+$" + performance.grossProfit.toFixed(2);
+
+    glElement.textContent =
+      "-$" + performance.grossLoss.toFixed(2);
+
+    if (performance.profitFactor === Infinity) {
+
+      pfElement.textContent = "∞";
+
+      description.textContent =
+        "No losing trades recorded";
+
+      return;
+    }
+
+    pfElement.textContent =
+      performance.profitFactor.toFixed(2);
+
+    if (performance.profitFactor > 1) {
+      description.textContent =
+        "Gross profit ÷ gross loss";
+    } else if (performance.profitFactor === 1) {
+      description.textContent =
+        "Breaking even overall";
+    } else {
+      description.textContent =
+        "Gross loss is currently higher";
+    }
+  }
+
+  // ---------------------------------------------------------
+  // GROWTH CHART
+  // ---------------------------------------------------------
+  function renderGrowthChart(performance) {
+
+    var svg =
+      document.getElementById("growthChart");
+
+    var empty =
+      document.getElementById("chartEmpty");
+
+    var growthValue =
+      document.getElementById("growthValue");
+
+    var points = performance.points;
+
+    if (!points || points.length < 1) {
+      svg.innerHTML = "";
+      empty.hidden = false;
+      growthValue.textContent = "$0.00";
+      return;
+    }
+
+    empty.hidden = true;
+
+    var width = 500;
+    var height = 210;
+
+    var paddingLeft = 18;
+    var paddingRight = 18;
+    var paddingTop = 18;
+    var paddingBottom = 28;
+
+    var chartWidth =
+      width - paddingLeft - paddingRight;
+
+    var chartHeight =
+      height - paddingTop - paddingBottom;
+
+    var values = points.map(function (p) {
+      return p.cumulative;
+    });
+
+    values.push(0);
+
+    var minValue = Math.min.apply(null, values);
+    var maxValue = Math.max.apply(null, values);
+
+    // Prevent zero-height charts
+    if (minValue === maxValue) {
+      minValue -= 1;
+      maxValue += 1;
+    }
+
+    var range = maxValue - minValue;
+
+    // Add some breathing room
+    minValue -= range * 0.08;
+    maxValue += range * 0.08;
+
+    function x(index) {
+
+      if (points.length === 1) {
+        return paddingLeft + chartWidth / 2;
+      }
+
+      return (
+        paddingLeft +
+        (index / (points.length - 1)) *
+          chartWidth
+      );
+    }
+
+    function y(value) {
+
+      return (
+        paddingTop +
+        (
+          (maxValue - value) /
+          (maxValue - minValue)
+        ) *
+        chartHeight
+      );
+    }
+
+    var linePoints = points.map(function (point, index) {
+      return (
+        x(index).toFixed(2) +
+        "," +
+        y(point.cumulative).toFixed(2)
+      );
+    }).join(" ");
+
+    // Zero line
+    var zeroY = y(0);
+
+    // Area under line
+    var firstX = x(0);
+    var lastX = x(points.length - 1);
+
+    var areaPoints =
+      firstX.toFixed(2) +
+      "," +
+      zeroY.toFixed(2) +
+      " " +
+      linePoints +
+      " " +
+      lastX.toFixed(2) +
+      "," +
+      zeroY.toFixed(2);
+
+    var finalValue =
+      performance.totalPnl;
+
+    var lineClass =
+      finalValue >= 0
+        ? "chart-profit"
+        : "chart-loss";
+
+    svg.innerHTML =
+
+      '<defs>' +
+
+        '<linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" class="' +
+            (finalValue >= 0
+              ? "fill-profit-top"
+              : "fill-loss-top") +
+          '" />' +
+
+          '<stop offset="100%" class="' +
+            (finalValue >= 0
+              ? "fill-profit-bottom"
+              : "fill-loss-bottom") +
+          '" />' +
+        '</linearGradient>' +
+
+      '</defs>' +
+
+      '<line ' +
+        'x1="' + paddingLeft + '" ' +
+        'y1="' + zeroY + '" ' +
+        'x2="' + (width - paddingRight) + '" ' +
+        'y2="' + zeroY + '" ' +
+        'class="zero-line" />' +
+
+      '<polygon ' +
+        'points="' + areaPoints + '" ' +
+        'class="growth-area" />' +
+
+      '<polyline ' +
+        'points="' + linePoints + '" ' +
+        'class="growth-line ' + lineClass + '" ' +
+        'fill="none" ' +
+        'stroke-linecap="round" ' +
+        'stroke-linejoin="round" />' +
+
+      '<circle ' +
+        'cx="' + lastX + '" ' +
+        'cy="' + y(finalValue) + '" ' +
+        'r="4" ' +
+        'class="growth-dot ' + lineClass + '" />';
+
+    growthValue.textContent =
+      formatMoney(finalValue);
+  }
+
+  // ---------------------------------------------------------
+  // JOURNAL
+  // ---------------------------------------------------------
   function renderJournal(data) {
-    var traderLine = document.getElementById("traderLine");
+
+    var traderLine =
+      document.getElementById("traderLine");
 
     traderLine.textContent =
-      data.first_name + (data.username ? " · @" + data.username : "");
+      data.first_name +
+      (
+        data.username
+          ? " · @" + data.username
+          : ""
+      );
 
-    document.getElementById("statsGrid").innerHTML = renderStats(data);
+    document.getElementById("statsGrid").innerHTML =
+      renderStats(data);
 
-    var list = document.getElementById("tradeList");
-    list.innerHTML = data.trades.map(renderTradeCard).join("");
+    var trades = data.trades || [];
+
+    var performance =
+      calculatePerformance(trades);
+
+    renderProfitFactor(performance);
+
+    renderGrowthChart(performance);
+
+    var list =
+      document.getElementById("tradeList");
+
+    list.innerHTML =
+      trades.map(renderTradeCard).join("");
 
     document.title =
-      (data.first_name || "Trader") + "'s Trade Journal · Darvix AI";
+      (data.first_name || "Trader") +
+      "'s Trade Journal · Darvix AI";
 
     showState("journal");
   }
@@ -215,6 +682,7 @@
   // FETCH
   // ---------------------------------------------------------
   function loadJournal() {
+
     var token = getToken();
 
     if (!token) {
@@ -224,22 +692,42 @@
 
     showState("loading");
 
-    var url = API_ENDPOINT + "?token=" + encodeURIComponent(token);
+    var url =
+      API_ENDPOINT +
+      "?token=" +
+      encodeURIComponent(token);
 
     fetch(url)
+
       .then(function (res) {
-        if (!res.ok) throw new Error("Request failed: " + res.status);
+
+        if (!res.ok) {
+          throw new Error(
+            "Request failed: " +
+            res.status
+          );
+        }
+
         return res.json();
       })
+
       .then(function (data) {
+
         if (!data || data.found === false) {
           showState("notFound");
           return;
         }
 
-        if (!data.trades || data.trades.length === 0) {
-          document.getElementById("emptyTraderName").textContent =
-            data.first_name || "this trader";
+        if (
+          !data.trades ||
+          data.trades.length === 0
+        ) {
+
+          document.getElementById(
+            "emptyTraderName"
+          ).textContent =
+            data.first_name ||
+            "this trader";
 
           showState("emptyTrades");
           return;
@@ -247,25 +735,38 @@
 
         renderJournal(data);
       })
+
       .catch(function () {
         showState("error");
       });
   }
 
-  var retryBtn = document.getElementById("retryBtn");
+  // ---------------------------------------------------------
+  // RETRY
+  // ---------------------------------------------------------
+  var retryBtn =
+    document.getElementById("retryBtn");
 
   if (retryBtn) {
-    retryBtn.addEventListener("click", loadJournal);
+    retryBtn.addEventListener(
+      "click",
+      loadJournal
+    );
   }
 
   // ---------------------------------------------------------
   // SHARE BUTTON
   // ---------------------------------------------------------
-  var shareBtn = document.getElementById("shareBtn");
-  var toast = document.getElementById("shareToast");
+  var shareBtn =
+    document.getElementById("shareBtn");
+
+  var toast =
+    document.getElementById("shareToast");
 
   function showToast(msg) {
+
     toast.textContent = msg;
+
     toast.classList.add("visible");
 
     setTimeout(function () {
@@ -274,9 +775,12 @@
   }
 
   function fallbackCopy(url) {
-    var temp = document.createElement("textarea");
+
+    var temp =
+      document.createElement("textarea");
 
     temp.value = url;
+
     temp.style.position = "fixed";
     temp.style.opacity = "0";
 
@@ -286,9 +790,13 @@
     temp.select();
 
     try {
+
       document.execCommand("copy");
+
       showToast("Link copied");
+
     } catch (e) {
+
       showToast("Couldn't copy link");
     }
 
@@ -296,40 +804,58 @@
   }
 
   if (shareBtn) {
-    shareBtn.addEventListener("click", function () {
-      var url = window.location.href;
 
-      if (!getToken()) {
-        showToast("Nothing to share yet");
-        return;
-      }
+    shareBtn.addEventListener(
+      "click",
+      function () {
 
-      if (navigator.share) {
-        navigator
-          .share({
+        var url =
+          window.location.href;
+
+        if (!getToken()) {
+
+          showToast(
+            "Nothing to share yet"
+          );
+
+          return;
+        }
+
+        if (navigator.share) {
+
+          navigator.share({
             title: document.title,
             url: url
-          })
-          .catch(function () {
-            /* cancelled */
+          }).catch(function () {
+            // cancelled
           });
 
-        return;
-      }
+          return;
+        }
 
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard
-          .writeText(url)
-          .then(function () {
-            showToast("Link copied");
-          })
-          .catch(function () {
-            fallbackCopy(url);
-          });
-      } else {
-        fallbackCopy(url);
+        if (
+          navigator.clipboard &&
+          navigator.clipboard.writeText
+        ) {
+
+          navigator.clipboard
+            .writeText(url)
+            .then(function () {
+
+              showToast("Link copied");
+
+            })
+            .catch(function () {
+
+              fallbackCopy(url);
+            });
+
+        } else {
+
+          fallbackCopy(url);
+        }
       }
-    });
+    );
   }
 
   // ---------------------------------------------------------
