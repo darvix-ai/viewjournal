@@ -53,7 +53,9 @@
   }
 
   function directionClass(direction) {
-    return (direction || "").toLowerCase() === "buy" ? "buy" : "sell";
+    return (direction || "").toLowerCase() === "buy"
+      ? "buy"
+      : "sell";
   }
 
   function directionArrow(direction) {
@@ -69,7 +71,10 @@
 
   // ---------------------------------------------------------
   // GET CALCULATED P&L
-  // Airtable calculated_pnl is the source of truth.
+  //
+  // Calculated PNL is the numerical source.
+  // Outcome is used as a safety net so the displayed sign
+  // always agrees with the recorded outcome.
   // ---------------------------------------------------------
   function getCalculatedPnl(trade) {
     var raw;
@@ -106,6 +111,25 @@
     var amount = parseFloat(raw);
 
     if (isNaN(amount)) {
+      amount = 0;
+    }
+
+    var outcome = (trade.outcome || "")
+      .toLowerCase()
+      .trim();
+
+    var absoluteAmount = Math.abs(amount);
+
+    // Outcome is the safety net for the sign.
+    if (outcome === "loss") {
+      return -absoluteAmount;
+    }
+
+    if (outcome === "win") {
+      return absoluteAmount;
+    }
+
+    if (outcome === "breakeven") {
       return 0;
     }
 
@@ -245,7 +269,9 @@
   function renderTradeCard(trade) {
     var actualPnl = getCalculatedPnl(trade);
 
+    // PNL color follows the normalized calculated PNL.
     var pnlClass = moneyClass(actualPnl);
+
     var oClass = outcomeClass(trade.outcome);
     var dClass = directionClass(trade.direction);
     var arrow = directionArrow(trade.direction);
@@ -583,9 +609,11 @@
       performance.totalPnl;
 
     var lineClass =
-      finalValue >= 0
+      finalValue > 0
         ? "chart-profit"
-        : "chart-loss";
+        : finalValue < 0
+          ? "chart-loss"
+          : "chart-profit";
 
     svg.innerHTML =
 
