@@ -21,6 +21,7 @@
       <div class="brand-mark">DARVIX <span>AI</span></div>
       <div class="brand-sub">FX JOURNAL</div>
     </div>
+
     <button class="share-btn" id="shareBtn" type="button">
       <span class="share-icon">&#8599;</span>
       Share
@@ -28,6 +29,7 @@
   </header>
 
   <main id="content">
+
     <!-- Loading state -->
     <div class="state-block" id="loadingState">
       <div class="spinner"></div>
@@ -53,7 +55,7 @@
       <button class="retry-btn" id="retryBtn" type="button">Retry</button>
     </div>
 
-    <!-- Empty state (found, zero trades) -->
+    <!-- Empty state -->
     <div class="state-block" id="emptyTradesState" hidden>
       <h1>No trades yet</h1>
       <p>Once <span id="emptyTraderName">this trader</span> journals a trade, it'll show up here.</p>
@@ -61,14 +63,74 @@
 
     <!-- Journal content -->
     <div id="journal" hidden>
+
       <div class="trader-strip">
         <span class="trader-dot"></span>
         <span id="traderLine"></span>
       </div>
 
+      <!-- Summary stats -->
       <div class="stats" id="statsGrid"></div>
 
+      <!-- Performance -->
+      <section class="performance-card">
+
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">PERFORMANCE</div>
+            <h2>Growth</h2>
+          </div>
+
+          <div class="growth-value" id="growthValue">$0.00</div>
+        </div>
+
+        <div class="chart-wrap">
+          <svg
+            id="growthChart"
+            class="growth-chart"
+            viewBox="0 0 500 210"
+            preserveAspectRatio="none"
+            aria-label="Cumulative P&L growth chart"
+            role="img">
+          </svg>
+
+          <div class="chart-empty" id="chartEmpty" hidden>
+            Not enough data to display growth.
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Profit factor -->
+      <section class="profit-factor-card">
+
+        <div class="pf-main">
+          <div class="section-kicker">PROFIT FACTOR</div>
+          <div class="pf-value" id="profitFactorValue">0.00</div>
+          <div class="pf-description" id="profitFactorDescription">
+            Gross profit ÷ gross loss
+          </div>
+        </div>
+
+        <div class="pf-breakdown">
+
+          <div class="pf-item">
+            <span>Gross Profit</span>
+            <strong class="profit" id="grossProfitValue">$0.00</strong>
+          </div>
+
+          <div class="pf-item">
+            <span>Gross Loss</span>
+            <strong class="loss" id="grossLossValue">$0.00</strong>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- Trades -->
       <div id="tradeList"></div>
+
     </div>
   </main>
 
