@@ -32,17 +32,30 @@
     });
   }
 
+  // Used by the TOP SUMMARY.
+  // This remains based on the actual numeric P&L.
   function moneyClass(n) {
     if (n > 0) return "profit";
     if (n < 0) return "loss";
     return "neutral";
   }
 
+  // Used by the individual trade OUTCOME badge.
   function outcomeClass(outcome) {
     var o = (outcome || "").toLowerCase();
     if (o === "win") return "outcome-win";
     if (o === "loss") return "outcome-loss";
     return "outcome-breakeven";
+  }
+
+  // Used by the individual trade P&L.
+  // The P&L colour now follows the selected trade outcome.
+  function pnlOutcomeClass(outcome) {
+    var o = (outcome || "").toLowerCase();
+
+    if (o === "win") return "profit";
+    if (o === "loss") return "loss";
+    return "neutral";
   }
 
   function directionClass(direction) {
@@ -105,7 +118,9 @@
   }
 
   function renderTradeCard(trade) {
-    var pnlClass = moneyClass(trade.pnl);
+    // Individual trade P&L colour now follows the trade outcome.
+    var pnlClass = pnlOutcomeClass(trade.outcome);
+
     var oClass = outcomeClass(trade.outcome);
     var dClass = directionClass(trade.direction);
     var arrow = directionArrow(trade.direction);
@@ -120,6 +135,7 @@
       : "";
 
     var shots = [];
+
     if (trade.before_screenshot) {
       shots.push(
         '<a class="screenshot" href="' + trade.before_screenshot + '" target="_blank" rel="noopener">' +
@@ -128,6 +144,7 @@
         '</a>'
       );
     }
+
     if (trade.after_screenshot) {
       shots.push(
         '<a class="screenshot" href="' + trade.after_screenshot + '" target="_blank" rel="noopener">' +
@@ -136,6 +153,7 @@
         '</a>'
       );
     }
+
     var screenshotsHTML = shots.length
       ? (
           '<div class="screenshots-title">TRADE SCREENSHOTS</div>' +
@@ -178,14 +196,18 @@
 
   function renderJournal(data) {
     var traderLine = document.getElementById("traderLine");
-    traderLine.textContent = data.first_name + (data.username ? " · @" + data.username : "");
+
+    traderLine.textContent =
+      data.first_name + (data.username ? " · @" + data.username : "");
 
     document.getElementById("statsGrid").innerHTML = renderStats(data);
 
     var list = document.getElementById("tradeList");
     list.innerHTML = data.trades.map(renderTradeCard).join("");
 
-    document.title = (data.first_name || "Trader") + "'s Trade Journal · Darvix AI";
+    document.title =
+      (data.first_name || "Trader") + "'s Trade Journal · Darvix AI";
+
     showState("journal");
   }
 
@@ -214,11 +236,15 @@
           showState("notFound");
           return;
         }
+
         if (!data.trades || data.trades.length === 0) {
-          document.getElementById("emptyTraderName").textContent = data.first_name || "this trader";
+          document.getElementById("emptyTraderName").textContent =
+            data.first_name || "this trader";
+
           showState("emptyTrades");
           return;
         }
+
         renderJournal(data);
       })
       .catch(function () {
@@ -227,7 +253,10 @@
   }
 
   var retryBtn = document.getElementById("retryBtn");
-  if (retryBtn) retryBtn.addEventListener("click", loadJournal);
+
+  if (retryBtn) {
+    retryBtn.addEventListener("click", loadJournal);
+  }
 
   // ---------------------------------------------------------
   // SHARE BUTTON
@@ -238,23 +267,31 @@
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add("visible");
-    setTimeout(function () { toast.classList.remove("visible"); }, 2200);
+
+    setTimeout(function () {
+      toast.classList.remove("visible");
+    }, 2200);
   }
 
   function fallbackCopy(url) {
     var temp = document.createElement("textarea");
+
     temp.value = url;
     temp.style.position = "fixed";
     temp.style.opacity = "0";
+
     document.body.appendChild(temp);
+
     temp.focus();
     temp.select();
+
     try {
       document.execCommand("copy");
       showToast("Link copied");
     } catch (e) {
       showToast("Couldn't copy link");
     }
+
     document.body.removeChild(temp);
   }
 
@@ -268,14 +305,27 @@
       }
 
       if (navigator.share) {
-        navigator.share({ title: document.title, url: url }).catch(function () { /* cancelled */ });
+        navigator
+          .share({
+            title: document.title,
+            url: url
+          })
+          .catch(function () {
+            /* cancelled */
+          });
+
         return;
       }
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(function () {
-          showToast("Link copied");
-        }).catch(function () { fallbackCopy(url); });
+        navigator.clipboard
+          .writeText(url)
+          .then(function () {
+            showToast("Link copied");
+          })
+          .catch(function () {
+            fallbackCopy(url);
+          });
       } else {
         fallbackCopy(url);
       }
