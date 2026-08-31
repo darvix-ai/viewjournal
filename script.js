@@ -58,10 +58,27 @@
       : "sell";
   }
 
-  function directionArrow(direction) {
-    return (direction || "").toLowerCase() === "buy"
-      ? "↗"
-      : "↘";
+  // ---------------------------------------------------------
+  // FINTECH DIRECTION ICONS
+  // ---------------------------------------------------------
+  function directionIcon(direction) {
+    var d = (direction || "").toLowerCase().trim();
+
+    if (d === "buy") {
+      return (
+        '<svg class="direction-icon" viewBox="0 0 24 24" aria-hidden="true">' +
+          '<path d="M5 19L19 5"></path>' +
+          '<path d="M9 5H19V15"></path>' +
+        '</svg>'
+      );
+    }
+
+    return (
+      '<svg class="direction-icon" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M5 5L19 19"></path>' +
+        '<path d="M19 9V19H9"></path>' +
+      '</svg>'
+    );
   }
 
   function getToken() {
@@ -70,14 +87,42 @@
   }
 
   // ---------------------------------------------------------
+  // MONEY PARSER
+  // ---------------------------------------------------------
+  function parseMoney(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return 0;
+    }
+
+    if (typeof value === "number") {
+      return isNaN(value) ? 0 : value;
+    }
+
+    var cleaned = String(value)
+      .replace(/[$,\s]/g, "")
+      .trim();
+
+    var number = parseFloat(cleaned);
+
+    return isNaN(number) ? 0 : number;
+  }
+
+  // ---------------------------------------------------------
   // GET CALCULATED P&L
   //
-  // Calculated PNL is the numerical source.
-  // Outcome is used as a safety net so the displayed sign
-  // always agrees with the recorded outcome.
+  // Calculated PNL is the preferred numerical source.
+  //
+  // If Calculated PNL is zero but the trade is recorded as
+  // Win/Loss and the original PnL field contains a value,
+  // use that original PnL as a fallback.
   // ---------------------------------------------------------
   function getCalculatedPnl(trade) {
     var raw;
+    var hasCalculatedValue = false;
 
     if (
       trade.calculated_pnl !== undefined &&
@@ -85,6 +130,7 @@
       trade.calculated_pnl !== ""
     ) {
       raw = trade.calculated_pnl;
+      hasCalculatedValue = true;
 
     } else if (
       trade.calculatedPnl !== undefined &&
@@ -92,6 +138,7 @@
       trade.calculatedPnl !== ""
     ) {
       raw = trade.calculatedPnl;
+      hasCalculatedValue = true;
 
     } else if (
       trade.pnl_calculated !== undefined &&
@@ -99,28 +146,40 @@
       trade.pnl_calculated !== ""
     ) {
       raw = trade.pnl_calculated;
+      hasCalculatedValue = true;
 
     } else {
       raw = trade.pnl;
     }
 
-    if (typeof raw === "string") {
-      raw = raw.replace(/[$,\s]/g, "");
-    }
-
-    var amount = parseFloat(raw);
-
-    if (isNaN(amount)) {
-      amount = 0;
-    }
+    var amount = parseMoney(raw);
 
     var outcome = (trade.outcome || "")
       .toLowerCase()
       .trim();
 
+    // -------------------------------------------------------
+    // FALLBACK
+    // -------------------------------------------------------
+    // Some records may have Calculated PNL = 0 while the
+    // original PnL field contains the actual dollar amount.
+    //
+    // Only use the fallback for Win/Loss.
+    // Breakeven must remain $0.
+    // -------------------------------------------------------
+    if (
+      hasCalculatedValue &&
+      amount === 0 &&
+      outcome !== "breakeven" &&
+      trade.pnl_display !== undefined &&
+      trade.pnl_display !== null &&
+      trade.pnl_display !== ""
+    ) {
+      amount = parseMoney(trade.pnl_display);
+    }
+
     var absoluteAmount = Math.abs(amount);
 
-    // Outcome is the safety net for the sign.
     if (outcome === "loss") {
       return -absoluteAmount;
     }
@@ -173,7 +232,8 @@
       points.push({
         trade: index + 1,
         pnl: pnl,
-        cumulative: cumulative
+        cumulative: cumulative,
+        date: trade.date || ""
       });
     });
 
@@ -225,7 +285,7 @@
         cls: ""
       },
       {
-        label: "Net P&amp;L",
+        label: "Net P&L",
         value: formatMoney(totalPnl),
         cls: moneyClass(totalPnl)
       },
@@ -269,12 +329,10 @@
   function renderTradeCard(trade) {
     var actualPnl = getCalculatedPnl(trade);
 
-    // PNL color follows the normalized calculated PNL.
     var pnlClass = moneyClass(actualPnl);
-
     var oClass = outcomeClass(trade.outcome);
     var dClass = directionClass(trade.direction);
-    var arrow = directionArrow(trade.direction);
+    var icon = directionIcon(trade.direction);
 
     var pnlDisplay = formatMoney(actualPnl);
 
@@ -361,11 +419,11 @@
             dClass +
             '">' +
 
-            '<span>' +
-              arrow +
-            '</span>' +
+            icon +
 
-            escapeHTML(trade.direction) +
+            '<span>' +
+              escapeHTML(trade.direction) +
+            '</span>' +
 
           '</div>' +
 
@@ -373,7 +431,7 @@
 
         '<div class="pnl-section">' +
 
-          '<div class="pnl-label">P&amp;L</div>' +
+          '<div class="pnl-label">P&L</div>' +
 
           '<div class="pnl ' +
             pnlClass +
@@ -497,14 +555,46 @@
     var growthValue =
       document.getElementById("growthValue");
 
-    var points = performance.points;
+    var points = performance.points || [];
 
-    if (!points || points.length < 1) {
+    if (!points.length) {
       svg.innerHTML = "";
       empty.hidden = false;
       growthValue.textContent = "$0.00";
       return;
     }
+
+    // -------------------------------------------------------
+    // IMPORTANT:
+    // Sort chart points chronologically.
+    //
+    // Airtable commonly returns newest records first.
+    // Without sorting, the growth curve can appear backwards.
+    // -------------------------------------------------------
+    points = points.slice().sort(function (a, b) {
+      var da = new Date(a.date).getTime();
+      var db = new Date(b.date).getTime();
+
+      if (isNaN(da) || isNaN(db)) {
+        return 0;
+      }
+
+      return da - db;
+    });
+
+    // Rebuild cumulative values after chronological sorting.
+    var cumulative = 0;
+
+    points = points.map(function (point, index) {
+      cumulative += point.pnl;
+
+      return {
+        trade: index + 1,
+        pnl: point.pnl,
+        cumulative: cumulative,
+        date: point.date
+      };
+    });
 
     empty.hidden = true;
 
@@ -606,7 +696,7 @@
       zeroY.toFixed(2);
 
     var finalValue =
-      performance.totalPnl;
+      cumulative;
 
     var lineClass =
       finalValue > 0
@@ -680,7 +770,7 @@
       data.first_name +
       (
         data.username
-          ? " · @" + data.username
+          ? " · @" + data.username.replace(/^@/, "")
           : ""
       );
 
@@ -796,6 +886,8 @@
     document.getElementById("shareToast");
 
   function showToast(msg) {
+    if (!toast) return;
+
     toast.textContent = msg;
 
     toast.classList.add("visible");
